@@ -20,6 +20,15 @@
     .stat { display: inline-block; min-width: 150px; text-align: center; margin-bottom: 10px;}
     input[type="file"] { display: none;}
     .btn { background: #eee; border: 1px solid #aaa; border-radius: 5px; padding: 5px 14px; margin: 0 5px;}
+    .editArea { width:95%; height:40px; font-size:0.97em;}
+    .action-links a { cursor:pointer; color:#2980d9; text-decoration:underline; margin:0 3px;}
+    .action-links a.delete { color:#b96c12;}
+    .action-links a:visited { color:#2980d9;}
+    .action-links a.delete:visited { color:#b96c12;}
+    @media (max-width: 600px) {
+      .stat { min-width: 120px;}
+      table,th,td { font-size:0.95em;}
+    }
   </style>
 </head>
 <body>
@@ -60,6 +69,7 @@
           <th>Benno</th>
           <th>Winner</th>
           <th>Reason</th>
+          <th>Actions</th>
         </tr>
       </thead>
       <tbody>
@@ -169,26 +179,96 @@
       document.getElementById('elinorAvg').textContent = count ? (elinorHiTotal/count).toFixed(1) + '/1000' : '--';
       document.getElementById('bennoAvg').textContent = count ? (bennoHiTotal/count).toFixed(1) + '/1000' : '--';
 
-      // Table
-      let rows = results.map(r => `
-        <tr>
-          <td>${r.date}</td>
-          <td>${r.puzzleNum||''}</td>
-          <td>
-            ${r.elinor.solved ? '✅' : '❌'}<br>
-            ${r.elinor.guesses} guesses<br>
-            Best: ${r.elinor.topMatch}/1000
-          </td>
-          <td>
-            ${r.benno.solved ? '✅' : '❌'}<br>
-            ${r.benno.guesses} guesses<br>
-            Best: ${r.benno.topMatch}/1000
-          </td>
-          <td class="${r.winner==='Elinor'?'el':r.winner==='Benno'?'bn':'tie'}">${r.winner}</td>
-          <td>${r.reason}</td>
-        </tr>
-      `).reverse().join('');
-      document.querySelector('#historyTable tbody').innerHTML = rows || '<tr><td colspan="6">No results yet.</td></tr>';
+      // Table with Edit/Delete; attach true index as data attribute
+      let rows = results.map((r, trueIndex) => ({...r, trueIndex}))
+        .reverse()
+        .map((r, rowIdx) => {
+          if (r._editing) {
+            // Show inline editing form
+            return `
+            <tr>
+              <td>${r.date}</td>
+              <td>${r.puzzleNum||''}</td>
+              <td><textarea id="editElinor${r.trueIndex}" class="editArea">${r.elinor.raw||''}</textarea></td>
+              <td><textarea id="editBenno${r.trueIndex}" class="editArea">${r.benno.raw||''}</textarea></td>
+              <td colspan="3" class="action-links">
+                <a href="#" onclick="saveEdit(${r.trueIndex});return false;">Save</a> |
+                <a href="#" onclick="cancelEdit(${r.trueIndex});return false;">Cancel</a>
+              </td>
+            </tr>
+            `;
+          } else {
+            return `
+            <tr>
+              <td>${r.date}</td>
+              <td>${r.puzzleNum||''}</td>
+              <td>
+                ${r.elinor.solved ? '✅' : '❌'}<br>
+                ${r.elinor.guesses} guesses<br>
+                Best: ${r.elinor.topMatch}/1000
+              </td>
+              <td>
+                ${r.benno.solved ? '✅' : '❌'}<br>
+                ${r.benno.guesses} guesses<br>
+                Best: ${r.benno.topMatch}/1000
+              </td>
+              <td class="${r.winner==='Elinor'?'el':r.winner==='Benno'?'bn':'tie'}">${r.winner}</td>
+              <td>${r.reason}</td>
+              <td class="action-links">
+                <a href="#" onclick="editEntry(${r.trueIndex});return false;">Edit</a> |
+                <a href="#" class="delete" onclick="deleteEntry(${r.trueIndex});return false;">Delete</a>
+              </td>
+            </tr>
+            `;
+          }
+        }).join('');
+      document.querySelector('#historyTable tbody').innerHTML = rows || '<tr><td colspan="7">No results yet.</td></tr>';
+    }
+
+    // Edit/Delete: Use actual array index (not reversed index)
+    window.editEntry = function(trueIndex) {
+      results[trueIndex]._editing = true;
+      saveData(results);
+      render();
+    }
+    window.cancelEdit = function(trueIndex) {
+      delete results[trueIndex]._editing;
+      render();
+    }
+    window.saveEdit = function(trueIndex) {
+      let r = results[trueIndex];
+      let elinorText = document.getElementById('editElinor'+trueIndex).value.trim();
+      let bennoText = document.getElementById('editBenno'+trueIndex).value.trim();
+      let eRes = parseResult(elinorText);
+      let bRes = parseResult(bennoText);
+      if (!eRes || !bRes) { alert('Please paste valid Semantle results for both players.'); return; }
+      // Recalculate winner/reason
+      let winner = 'Tie', reason = '';
+      if (eRes.solved && !bRes.solved) { winner = 'Elinor'; reason = 'Solved, opponent didn\'t.'; }
+      else if (!eRes.solved && bRes.solved) { winner = 'Benno'; reason = 'Solved, opponent didn\'t.'; }
+      else if (eRes.solved && bRes.solved) {
+        if (eRes.guesses < bRes.guesses) { winner = 'Elinor'; reason = 'Fewer guesses.'; }
+        else if (eRes.guesses > bRes.guesses) { winner = 'Benno'; reason = 'Fewer guesses.'; }
+        else { winner = 'Tie'; reason = 'Same number of guesses.'; }
+      }
+      else { // neither solved
+        if (eRes.topMatch > bRes.topMatch) { winner = 'Elinor'; reason = 'Closer word.'; }
+        else if (eRes.topMatch < bRes.topMatch) { winner = 'Benno'; reason = 'Closer word.'; }
+        else { winner = 'Tie'; reason = 'Same similarity.'; }
+      }
+      r.elinor = eRes; r.benno = bRes;
+      r.elinor.raw = elinorText; r.benno.raw = bennoText;
+      r.puzzleNum = eRes.puzzleNum || bRes.puzzleNum || r.puzzleNum;
+      r.winner = winner; r.reason = reason;
+      delete r._editing;
+      saveData(results);
+      render();
+    }
+    window.deleteEntry = function(trueIndex) {
+      if (!confirm('Delete this result? This cannot be undone.')) return;
+      results.splice(trueIndex, 1);
+      saveData(results);
+      render();
     }
 
     // CSV Export/Import
