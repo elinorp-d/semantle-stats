@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Semantle Head-to-Head: Elinor vs Benno</title>
+  <style>
+    body { font-family: system-ui,sans-serif; max-width: 700px; margin: 30px auto; }
+    h1, h2 { text-align: center; }
+    textarea { width: 95%; height: 70px; font-size: 1em; margin-bottom: 8px;}
+    label { font-weight: bold; display: block; margin-top: 18px;}
+    button { margin-top: 10px; font-size: 1em; }
+    .winner { font-size: 1.1em; margin: 10px 0; font-weight: bold; }
+    table { border-collapse: collapse; width: 100%; margin-top: 22px;}
+    th, td { border: 1px solid #ccc; padding: 4px 8px; text-align: center;}
+    th { background: #f2f2f2; }
+    .el { color: #2980d9; font-weight: bold; }
+    .bn { color: #b96c12; font-weight: bold; }
+    .tie { color: #555; }
+    .box { background: #fafbfc; border-radius: 12px; padding: 18px; margin-top: 15px; box-shadow: 0 1px 4px #ddd;}
+    .stat { display: inline-block; min-width: 150px; text-align: center; margin-bottom: 10px;}
+    input[type="file"] { display: none;}
+    .btn { background: #eee; border: 1px solid #aaa; border-radius: 5px; padding: 5px 14px; margin: 0 5px;}
+  </style>
+</head>
+<body>
+  <h1>Semantle Head-to-Head</h1>
+  <h2><span class="el">Elinor</span> vs <span class="bn">Benno</span></h2>
+
+  <div class="box">
+    <form id="entryForm" autocomplete="off">
+      <label>Elinor's Semantle Result:</label>
+      <textarea id="elinorInput" placeholder="Paste your Semantle result here"></textarea>
+      <label>Benno's Semantle Result:</label>
+      <textarea id="bennoInput" placeholder="Paste Benno's Semantle result here"></textarea>
+      <button type="submit" class="btn">Add Today's Result</button>
+    </form>
+  </div>
+
+  <div class="box" id="dashboard">
+    <h3>Stats Dashboard</h3>
+    <div class="stat"><span class="el">Elinor</span> Win %: <span id="elinorWin"></span></div>
+    <div class="stat"><span class="bn">Benno</span> Win %: <span id="bennoWin"></span></div>
+    <div class="stat">Ties: <span id="ties"></span></div>
+    <br>
+    <div class="stat"><span class="el">Elinor</span> Solve Rate: <span id="elinorSolve"></span></div>
+    <div class="stat"><span class="bn">Benno</span> Solve Rate: <span id="bennoSolve"></span></div>
+    <br>
+    <div class="stat"><span class="el">Elinor</span> Avg Highest Guess: <span id="elinorAvg"></span></div>
+    <div class="stat"><span class="bn">Benno</span> Avg Highest Guess: <span id="bennoAvg"></span></div>
+  </div>
+
+  <div class="box">
+    <h3>Results History</h3>
+    <table id="historyTable">
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>Puzzle #</th>
+          <th>Elinor</th>
+          <th>Benno</th>
+          <th>Winner</th>
+          <th>Reason</th>
+        </tr>
+      </thead>
+      <tbody>
+        <!-- Data will appear here -->
+      </tbody>
+    </table>
+    <div style="margin-top:15px;">
+      <button class="btn" onclick="exportCSV()">Export CSV</button>
+      <button class="btn" onclick="document.getElementById('importFile').click()">Import CSV</button>
+      <input type="file" id="importFile" accept=".csv" />
+    </div>
+  </div>
+
+  <script>
+    // Utilities to parse Semantle pasted results
+    function parseResult(text) {
+      if (!text || text.length < 5) return null;
+      let solved = text.includes('✅');
+      let guesses = Number((text.match(/([0-9]+) Guesses/)||[])[1] || 0);
+      let topMatch = Number((text.match(/🥈 ([0-9]+)/)||[])[1] || 0);
+      let puzzleNum = Number((text.match(/#(\d+)/)||[])[1] || '');
+      let topGuess = Number((text.match(/🔝 Guess #([0-9]+)/)||[])[1] || 0);
+      return { solved, guesses, topMatch, puzzleNum, topGuess, raw: text.trim() };
+    }
+
+    // Storage helpers
+    function saveData(data) { localStorage.setItem('semantleData2', JSON.stringify(data)); }
+    function loadData() { return JSON.parse(localStorage.getItem('semantleData2')||'[]'); }
+
+    // Main state
+    let results = loadData();
+    render();
+
+    document.getElementById('entryForm').onsubmit = function(e) {
+      e.preventDefault();
+      let elinorRaw = document.getElementById('elinorInput').value.trim();
+      let bennoRaw = document.getElementById('bennoInput').value.trim();
+      let eRes = parseResult(elinorRaw);
+      let bRes = parseResult(bennoRaw);
+
+      if (!eRes || !bRes) {
+        alert('Both results must be pasted and look like Semantle results.');
+        return;
+      }
+
+      // Puzzle number/date (use puzzle # as date key, or fallback to today)
+      let puzzleNum = eRes.puzzleNum || bRes.puzzleNum || '';
+      let today = new Date().toISOString().slice(0,10);
+
+      // Calculate winner & reason
+      let winner = 'Tie', reason = '';
+      if (eRes.solved && !bRes.solved) { winner = 'Elinor'; reason = 'Solved, opponent didn\'t.'; }
+      else if (!eRes.solved && bRes.solved) { winner = 'Benno'; reason = 'Solved, opponent didn\'t.'; }
+      else if (eRes.solved && bRes.solved) {
+        if (eRes.guesses < bRes.guesses) { winner = 'Elinor'; reason = 'Fewer guesses.'; }
+        else if (eRes.guesses > bRes.guesses) { winner = 'Benno'; reason = 'Fewer guesses.'; }
+        else { winner = 'Tie'; reason = 'Same number of guesses.'; }
+      }
+      else { // neither solved
+        if (eRes.topMatch > bRes.topMatch) { winner = 'Elinor'; reason = 'Closer word.'; }
+        else if (eRes.topMatch < bRes.topMatch) { winner = 'Benno'; reason = 'Closer word.'; }
+        else { winner = 'Tie'; reason = 'Same similarity.'; }
+      }
+
+      // Prevent duplicates by puzzleNum
+      if (puzzleNum && results.some(r => r.puzzleNum == puzzleNum)) {
+        if (!confirm("You've already entered results for this puzzle #. Add again?")) return;
+      }
+
+      results.push({
+        date: today,
+        puzzleNum,
+        elinor: eRes,
+        benno: bRes,
+        winner, reason
+      });
+      saveData(results);
+      document.getElementById('elinorInput').value = '';
+      document.getElementById('bennoInput').value = '';
+      render();
+    };
+
+    function render() {
+      // Win counts
+      let elinorWins = 0, bennoWins = 0, ties = 0;
+      let elinorSolves = 0, bennoSolves = 0;
+      let elinorHiTotal = 0, bennoHiTotal = 0, count = 0;
+
+      results.forEach(r => {
+        if (r.winner === 'Elinor') elinorWins++;
+        else if (r.winner === 'Benno') bennoWins++;
+        else ties++;
+        if (r.elinor.solved) elinorSolves++;
+        if (r.benno.solved) bennoSolves++;
+        elinorHiTotal += r.elinor.topMatch || 0;
+        bennoHiTotal += r.benno.topMatch || 0;
+        count++;
+      });
+
+      document.getElementById('elinorWin').textContent = count ? (100*elinorWins/count).toFixed(1) + '%' : '--';
+      document.getElementById('bennoWin').textContent = count ? (100*bennoWins/count).toFixed(1) + '%' : '--';
+      document.getElementById('ties').textContent = ties;
+
+      document.getElementById('elinorSolve').textContent = count ? (100*elinorSolves/count).toFixed(1) + '%' : '--';
+      document.getElementById('bennoSolve').textContent = count ? (100*bennoSolves/count).toFixed(1) + '%' : '--';
+
+      document.getElementById('elinorAvg').textContent = count ? (elinorHiTotal/count).toFixed(1) + '/1000' : '--';
+      document.getElementById('bennoAvg').textContent = count ? (bennoHiTotal/count).toFixed(1) + '/1000' : '--';
+
+      // Table
+      let rows = results.map(r => `
+        <tr>
+          <td>${r.date}</td>
+          <td>${r.puzzleNum||''}</td>
+          <td>
+            ${r.elinor.solved ? '✅' : '❌'}<br>
+            ${r.elinor.guesses} guesses<br>
+            Best: ${r.elinor.topMatch}/1000
+          </td>
+          <td>
+            ${r.benno.solved ? '✅' : '❌'}<br>
+            ${r.benno.guesses} guesses<br>
+            Best: ${r.benno.topMatch}/1000
+          </td>
+          <td class="${r.winner==='Elinor'?'el':r.winner==='Benno'?'bn':'tie'}">${r.winner}</td>
+          <td>${r.reason}</td>
+        </tr>
+      `).reverse().join('');
+      document.querySelector('#historyTable tbody').innerHTML = rows || '<tr><td colspan="6">No results yet.</td></tr>';
+    }
+
+    // CSV Export/Import
+    function exportCSV() {
+      const header = ['date','puzzleNum',
+        'elinorSolved','elinorGuesses','elinorTopMatch',
+        'bennoSolved','bennoGuesses','bennoTopMatch',
+        'winner','reason'
+      ];
+      const rows = results.map(r=>[
+        r.date, r.puzzleNum,
+        r.elinor.solved, r.elinor.guesses, r.elinor.topMatch,
+        r.benno.solved, r.benno.guesses, r.benno.topMatch,
+        r.winner, r.reason.replace(/,/g, ';')
+      ]);
+      let csv = [header.join(',')].concat(rows.map(r=>r.join(','))).join('\n');
+      let blob = new Blob([csv], {type:'text/csv'});
+      let link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = 'semantle_elinor_benno.csv';
+      link.click();
+    }
+
+    document.getElementById('importFile').addEventListener('change', function(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+      let reader = new FileReader();
+      reader.onload = function(evt) {
+        let text = evt.target.result;
+        let lines = text.split(/\r?\n/);
+        let header = lines.shift().split(',');
+        let idx = {};
+        header.forEach((h,i)=>{idx[h]=i});
+        let imported = [];
+        lines.forEach(line=>{
+          if (!line.trim()) return;
+          let parts = line.split(',');
+          imported.push({
+            date: parts[idx['date']],
+            puzzleNum: parts[idx['puzzleNum']],
+            elinor: {
+              solved: parts[idx['elinorSolved']]==='true',
+              guesses: Number(parts[idx['elinorGuesses']]),
+              topMatch: Number(parts[idx['elinorTopMatch']])
+            },
+            benno: {
+              solved: parts[idx['bennoSolved']]==='true',
+              guesses: Number(parts[idx['bennoGuesses']]),
+              topMatch: Number(parts[idx['bennoTopMatch']])
+            },
+            winner: parts[idx['winner']],
+            reason: parts[idx['reason']].replace(/;/g,',')
+          });
+        });
+        results = imported;
+        saveData(results);
+        render();
+        alert('Import complete! Your data has been loaded.');
+        e.target.value = '';
+      };
+      reader.readAsText(file);
+    });
+  </script>
+</body>
+</html>
