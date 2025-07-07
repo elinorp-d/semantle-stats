@@ -1,3 +1,7 @@
-date,puzzleNum,elinorSolved,elinorGuesses,elinorTopMatch,bennoSolved,bennoGuesses,bennoTopMatch,winner,reason
-2025-07-02,1250,true,97,995,false,68,0,Elinor,Solved; opponent didn't.
-2025-07-03,1251,true,55,992,true,41,970,Benno,Fewer guesses.
+date,puzzleNum,elinorSolved,elinorGuesses,elinorTopMatch,elinorTopGuessNum,bennoSolved,bennoGuesses,bennoTopMatch,bennoTopGuessNum,winner,points,reason
+2025-07-02,1250,true,97,995,92,false,68,0,0,Elinor,25,Solved; opponent didn't.
+2025-07-03,1251,true,55,992,53,true,41,970,37,Benno,0.14,Fewer guesses.
+2025-07-04,1252,false,102,785,85,true,49,785,30,Benno,9.3,Solved; opponent didn't.
+2025-07-05,1253,false,55,984,54,true,38,987,34,Benno,5.32,Solved; opponent didn't.
+2025-07-06,1254,false,88,557,81,false,52,720,49,Benno,1.63,Closer word.
+2025-07-07,1255,false,98,984,96,false,91,991,88,Benno,0.07,Closer word.
