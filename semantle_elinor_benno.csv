@@ -1,7 +1,19 @@
 date,puzzleNum,elinorSolved,elinorGuesses,elinorTopMatch,elinorTopGuessNum,bennoSolved,bennoGuesses,bennoTopMatch,bennoTopGuessNum,winner,points,reason
-2025-07-02,1250,true,97,995,92,false,68,0,0,Elinor,25,Solved; opponent didn't.
-2025-07-03,1251,true,55,992,53,true,41,970,37,Benno,0.14,Fewer guesses.
-2025-07-04,1252,false,102,785,85,true,49,785,30,Benno,9.3,Solved; opponent didn't.
-2025-07-05,1253,false,55,984,54,true,38,987,34,Benno,5.32,Solved; opponent didn't.
-2025-07-06,1254,false,88,557,81,false,52,720,49,Benno,1.63,Closer word.
-2025-07-07,1255,false,98,984,96,false,91,991,88,Benno,0.07,Closer word.
+2025-07-02,1250,false,97,995,42,false,68,0,0,Elinor,25,Solved; opponent didn't.
+2025-07-03,1251,false,55,992,38,false,41,970,31,Benno,0.14,Fewer guesses.
+2025-07-04,1252,false,102,785,72,false,49,785,10,Benno,9.3,Solved; opponent didn't.
+2025-07-05,1253,false,55,984,35,false,38,987,35,Benno,5.32,Solved; opponent didn't.
+2025-07-06,1254,false,88,557,75,false,52,720,34,Benno,1.63,Closer word.
+2025-07-07,1255,false,98,984,97,false,91,991,89,Benno,0.07,Closer word.
+2025-07-08,1256,false,74,958,70,false,67,958,55,Benno,0.15,Earlier top guess.
+2025-07-09,1257,false,65,992,22,false,76,933,28,Elinor,0.59,Closer word.
+2025-07-10,1258,false,80,994,70,false,71,838,64,Elinor,1.56,Closer word.
+2025-07-11,1259,false,23,967,20,false,81,893,35,Elinor,7.14,Solved; opponent didn't.
+2025-07-12,1260,false,47,999,42,false,50,999,39,Elinor,0.03,Fewer guesses.
+2025-07-14,1261,false,57,986,52,false,66,977,58,Elinor,5.46,Solved; opponent didn't.
+2025-07-14,1262,false,88,422,43,false,77,801,21,Benno,3.79,Closer word.
+2025-07-15,1263,false,93,140,91,false,84,938,34,Benno,7.98,Closer word.
+2025-07-16,1264,false,59,998,43,false,94,975,92,Elinor,5.5,Solved; opponent didn't.
+2025-08-05,1284,false,85,941,69,false,40,870,17,Benno,6.18,Solved; opponent didn't.
+2025-08-15,1293,false,102,860,86,true,51,997,49,Benno,7.8,Solved; opponent didn't.
+2025-08-15,1294,true,15,994,14,false,75,808,67,Elinor,8.84,Solved; opponent didn't.
